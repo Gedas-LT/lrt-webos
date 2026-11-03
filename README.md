@@ -1,6 +1,6 @@
-# LRT Televizija for webOS
+# LRT for webOS
 
-A packaged webOS app that plays the free LRT Televizija live stream on an LG TV. On launch the app asks LRT for a fresh HLS address and plays it with the TV’s native player.
+A packaged webOS app that plays the free LRT Televizija and LRT Plius live streams on an LG TV. On launch the app asks LRT for a fresh HLS address and plays it with the TV’s native player. The last channel you chose starts the next time you open the app.
 
 The stream address is signed for the IP that requested it, so the TV must request it itself. An address fetched on a computer will not play on the TV.
 
@@ -43,7 +43,7 @@ ares-novacom --device tv --getkey
 From this directory:
 
 ```bash
-ares-package .
+ares-package -e service . ./service
 ares-install --device tv ./lt.personal.lrttelevizija_1.0.0_all.ipk
 ares-launch --device tv lt.personal.lrttelevizija
 ```
@@ -52,10 +52,12 @@ Installing the same app id again replaces the previous package. The webOS emulat
 
 ## Remote
 
-- **Back** closes the app. On webOS TV 6.0 and later the TV may ask you to confirm.
+- **Up** and **Down** move between LRT Televizija and LRT Plius. **OK** plays the highlighted channel.
+- While a channel is playing, **OK** or **Back** opens the list. The picture keeps playing until you choose the other channel. **OK** on the channel that is already playing returns to it.
+- **Back** on the channel list closes the app. On webOS TV 6.0 and later the TV may ask you to confirm.
 - **Play** and **Pause** start and pause the picture. **Play/Pause** toggles it.
 - If the stream cannot be started, the screen says **Nepavyko paleisti**. Press **OK** to try again.
 
 ## Third-party code
 
-`webOSTV.js` is LG’s webOS TV library (1.2.11), used for `webOS.platformBack()`. It is covered by the Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
+`webOSTV.js` is LG’s webOS TV library (1.2.11). It is covered by the Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0

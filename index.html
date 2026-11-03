@@ -2,17 +2,30 @@
 <html lang="lt">
   <head>
     <meta charset="utf-8" />
-    <title>LRT Televizija</title>
+    <title>LRT</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="webOSTV.js"></script>
   </head>
   <body>
     <video id="player" autoplay></video>
-    <div id="status" role="status">
+    <div id="status" class="hidden" role="status">
       <div class="status-inner">
-        <p id="status-title">LRT Televizija</p>
+        <p id="status-title">LRT</p>
         <p id="status-message">Jungiamasi…</p>
         <p id="status-hint" class="hidden">Paspauskite OK, kad bandytumėte dar kartą</p>
+      </div>
+    </div>
+    <div id="channels">
+      <div class="channel-panel">
+        <p class="channel-kicker">Kanalai</p>
+        <div id="channel-LTV1" class="channel selected" data-id="LTV1">
+          <p class="channel-name">LRT Televizija</p>
+          <p class="channel-now"></p>
+        </div>
+        <div id="channel-LTV2" class="channel" data-id="LTV2">
+          <p class="channel-name">LRT Plius</p>
+          <p class="channel-now"></p>
+        </div>
       </div>
     </div>
     <script src="app.js"></script>

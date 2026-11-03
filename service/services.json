@@ -1,0 +1,10 @@
+{
+  "id": "lt.personal.lrttelevizija.service",
+  "description": "Reads the current LRT programme titles",
+  "services": [
+    {
+      "name": "lt.personal.lrttelevizija.service",
+      "description": "Reads the current LRT programme titles"
+    }
+  ]
+}

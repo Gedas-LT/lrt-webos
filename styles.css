@@ -5,6 +5,8 @@ body {
   right: 0;
   bottom: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
   background: #000;
   overflow: hidden;
@@ -69,4 +71,72 @@ body {
 
 #status-hint.hidden {
   display: none;
+}
+
+#channels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 760px;
+  height: 100%;
+  display: table;
+  background: rgba(8, 8, 12, 0.78);
+  z-index: 3;
+}
+
+#channels.hidden {
+  display: none;
+}
+
+.channel-panel {
+  display: table-cell;
+  vertical-align: middle;
+  padding: 0 56px;
+}
+
+.channel-kicker {
+  margin: 0 0 36px;
+  font-size: 28px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #bdbdbd;
+}
+
+.channel {
+  margin: 0 0 20px;
+  padding: 32px 36px;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.channel.selected {
+  background: #fff;
+  color: #1b1464;
+}
+
+.channel-name,
+.channel-now {
+  margin: 0;
+}
+
+.channel-name {
+  font-size: 48px;
+  font-weight: 600;
+}
+
+.channel-now {
+  display: none;
+  margin-top: 12px;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: #c8c8c8;
+}
+
+.channel.selected .channel-now {
+  color: #3a3578;
+}
+
+.channel.has-title .channel-now {
+  display: block;
 }

@@ -1,0 +1,6 @@
+{
+  "name": "lt.personal.lrttelevizija.service",
+  "version": "1.0.0",
+  "description": "Reads the current LRT programme titles",
+  "main": "service.js"
+}

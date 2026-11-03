@@ -1,5 +1,10 @@
 (function () {
-  var LIVE_API = "https://www.lrt.lt/servisai/stream_url/live/get_live_url.php?channel=LTV1";
+  var LIVE_API = "https://www.lrt.lt/servisai/stream_url/live/get_live_url.php?channel=";
+  var CHANNELS = [
+    { id: "LTV1", name: "LRT Televizija" },
+    { id: "LTV2", name: "LRT Plius" }
+  ];
+  var STORAGE_KEY = "lrt-channel";
   var REFRESH_LEAD_MS = 2 * 60 * 1000;
   var STALL_MS = 15000;
   var LOAD_MS = 20000;
@@ -8,10 +13,18 @@
 
   var video = document.getElementById("player");
   var statusEl = document.getElementById("status");
+  var titleEl = document.getElementById("status-title");
   var messageEl = document.getElementById("status-message");
   var hintEl = document.getElementById("status-hint");
+  var channelsEl = document.getElementById("channels");
+  var channelNodes = document.querySelectorAll(".channel");
 
   var streams = null;
+  var activeChannel = "";
+  var selectedIndex = 0;
+  var listOpen = true;
+  var programmeTitles = {};
+  var channelToken = 0;
   var playingUrl = "";
   var sawPlayback = false;
   var userPaused = false;
@@ -40,7 +53,135 @@
       })
     );
 
+  function channelById(id) {
+    var i;
+    for (i = 0; i < CHANNELS.length; i++) {
+      if (CHANNELS[i].id === id) {
+        return CHANNELS[i];
+      }
+    }
+    return null;
+  }
+
+  function storedChannelId() {
+    try {
+      var id = localStorage.getItem(STORAGE_KEY);
+      if (channelById(id)) {
+        return id;
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  function rememberChannel(id) {
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch (e) {}
+  }
+
+  function paintChannels() {
+    var i;
+    for (i = 0; i < channelNodes.length; i++) {
+      var id = channelNodes[i].getAttribute("data-id");
+      var title = programmeTitles[id] || "";
+      var now = channelNodes[i].querySelector(".channel-now");
+      channelNodes[i].className = "channel";
+      if (i === selectedIndex) {
+        channelNodes[i].className += " selected";
+      }
+      if (title) {
+        channelNodes[i].className += " has-title";
+      }
+      if (now) {
+        now.textContent = title;
+      }
+    }
+  }
+
+  function loadTitles() {
+    if (!window.webOS || !webOS.service || typeof webOS.service.request !== "function") {
+      return;
+    }
+    try {
+      webOS.service.request("luna://lt.personal.lrttelevizija.service", {
+        method: "titles",
+        parameters: {},
+        onSuccess: function (res) {
+          var titles = res && res.titles;
+          if (!titles) {
+            return;
+          }
+          if (titles.LTV1) {
+            programmeTitles.LTV1 = titles.LTV1;
+          }
+          if (titles.LTV2) {
+            programmeTitles.LTV2 = titles.LTV2;
+          }
+          paintChannels();
+        },
+        onFailure: function () {}
+      });
+    } catch (e) {}
+  }
+
+  function showList() {
+    var i;
+    for (i = 0; i < CHANNELS.length; i++) {
+      if (CHANNELS[i].id === activeChannel) {
+        selectedIndex = i;
+      }
+    }
+    listOpen = true;
+    paintChannels();
+    loadTitles();
+    channelsEl.className = "";
+    if (!failed) {
+      statusEl.className = "hidden";
+    }
+  }
+
+  function hideList() {
+    listOpen = false;
+    channelsEl.className = "hidden";
+  }
+
+  function clearTimers() {
+    clearStall();
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      refreshTimer = null;
+    }
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    if (loadTimer) {
+      clearTimeout(loadTimer);
+      loadTimer = null;
+    }
+    if (errorTimer) {
+      clearTimeout(errorTimer);
+      errorTimer = null;
+    }
+  }
+
+  function stopVideo() {
+    clearTimers();
+    try {
+      video.pause();
+    } catch (e) {}
+    while (video.firstChild) {
+      video.removeChild(video.firstChild);
+    }
+    try {
+      video.load();
+    } catch (e2) {}
+  }
+
   function showOverlay(message, isError) {
+    if (listOpen && !isError) {
+      return;
+    }
     messageEl.textContent = message;
     hintEl.className = isError ? "" : "hidden";
     statusEl.className = "";
@@ -94,9 +235,10 @@
     if (delay < 15000) {
       delay = 15000;
     }
+    var token = channelToken;
     refreshTimer = setTimeout(function () {
       refreshTimer = null;
-      if (userPaused || failed) {
+      if (token !== channelToken || userPaused || failed) {
         return;
       }
       start();
@@ -125,6 +267,7 @@
   }
 
   function playUrl(url) {
+    var token = channelToken;
     if (errorTimer) {
       clearTimeout(errorTimer);
       errorTimer = null;
@@ -152,7 +295,7 @@
     scheduleRefresh(url);
     loadTimer = setTimeout(function () {
       loadTimer = null;
-      if (sawPlayback || userPaused || waitingForStart || failed || playingUrl !== url) {
+      if (token !== channelToken || sawPlayback || userPaused || waitingForStart || failed || playingUrl !== url) {
         return;
       }
       failOrRetry();
@@ -173,9 +316,9 @@
     } catch (e2) {}
   }
 
-  function fetchStreams(callback) {
+  function fetchStreams(channelId, callback) {
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", LIVE_API, true);
+    xhr.open("GET", LIVE_API + encodeURIComponent(channelId), true);
     try {
       xhr.setRequestHeader("Cache-Control", "no-cache");
     } catch (e) {}
@@ -228,6 +371,11 @@
   }
 
   function start() {
+    var token;
+    var channelId;
+    if (!activeChannel) {
+      return;
+    }
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
@@ -235,11 +383,16 @@
     if (fetching) {
       return;
     }
+    token = channelToken;
+    channelId = activeChannel;
     fetching = true;
     if (!sawPlayback) {
       showOverlay("Jungiamasi…", false);
     }
-    fetchStreams(function (err, next) {
+    fetchStreams(channelId, function (err, next) {
+      if (token !== channelToken || channelId !== activeChannel) {
+        return;
+      }
       fetching = false;
       if (err) {
         if (sawPlayback && !video.paused && video.readyState >= 2) {
@@ -288,12 +441,16 @@
 
   video.addEventListener("error", function () {
     var urlAtError = playingUrl;
+    var tokenAtError = channelToken;
+    if (!urlAtError) {
+      return;
+    }
     if (errorTimer) {
       clearTimeout(errorTimer);
     }
     errorTimer = setTimeout(function () {
       errorTimer = null;
-      if (playingUrl !== urlAtError || sawPlayback || userPaused || waitingForStart) {
+      if (tokenAtError !== channelToken || playingUrl !== urlAtError || sawPlayback || userPaused || waitingForStart) {
         return;
       }
       if (streams && streams.fallback && playingUrl !== streams.fallback) {
@@ -322,6 +479,47 @@
         start();
       });
     }
+  }
+
+  function playChannel(id) {
+    var channel = channelById(id);
+    if (!channel) {
+      return;
+    }
+    channelToken += 1;
+    activeChannel = id;
+    rememberChannel(id);
+    titleEl.textContent = channel.name;
+    hideList();
+    fetching = false;
+    sawPlayback = false;
+    userPaused = false;
+    failed = false;
+    waitingForStart = false;
+    streams = null;
+    playingUrl = "";
+    autoRetries = 0;
+    stopVideo();
+    start();
+  }
+
+  function choose(id) {
+    if (id === activeChannel && !failed && (sawPlayback || fetching || playingUrl || waitingForStart || userPaused)) {
+      hideList();
+      if (waitingForStart || userPaused) {
+        beginPlayback();
+        return;
+      }
+      if (!sawPlayback && !fetching) {
+        start();
+        return;
+      }
+      if (!sawPlayback) {
+        showOverlay("Jungiamasi…", false);
+      }
+      return;
+    }
+    playChannel(id);
   }
 
   function exitApp() {
@@ -353,6 +551,12 @@
     if (code === 461 || code === 8) {
       return "back";
     }
+    if (code === 38) {
+      return "up";
+    }
+    if (code === 40) {
+      return "down";
+    }
     if (code === 13) {
       return "enter";
     }
@@ -379,6 +583,12 @@
       token === "escape"
     ) {
       return "back";
+    }
+    if (token === "arrowup" || token === "up") {
+      return "up";
+    }
+    if (token === "arrowdown" || token === "down") {
+      return "down";
     }
     if (token === "enter" || token === "numpadenter" || token === "select") {
       return "enter";
@@ -409,12 +619,35 @@
       event.preventDefault();
       document.body.focus();
 
+      if (action === "up" || action === "down") {
+        if (!listOpen) {
+          return;
+        }
+        selectedIndex += action === "down" ? 1 : -1;
+        if (selectedIndex < 0) {
+          selectedIndex = CHANNELS.length - 1;
+        }
+        if (selectedIndex >= CHANNELS.length) {
+          selectedIndex = 0;
+        }
+        paintChannels();
+        return;
+      }
+
       if (action === "back") {
-        exitApp();
+        if (listOpen) {
+          exitApp();
+          return;
+        }
+        showList();
         return;
       }
 
       if (action === "enter") {
+        if (listOpen) {
+          choose(CHANNELS[selectedIndex].id);
+          return;
+        }
         if (waitingForStart) {
           beginPlayback();
           return;
@@ -422,7 +655,13 @@
         if (failed) {
           autoRetries = 0;
           start();
+          return;
         }
+        showList();
+        return;
+      }
+
+      if (listOpen) {
         return;
       }
 
@@ -450,5 +689,13 @@
     true
   );
 
-  start();
+  var stored = storedChannelId();
+  if (stored) {
+    selectedIndex = stored === "LTV2" ? 1 : 0;
+    playChannel(stored);
+  } else {
+    showList();
+  }
+  loadTitles();
+  setInterval(loadTitles, 60000);
 })();
