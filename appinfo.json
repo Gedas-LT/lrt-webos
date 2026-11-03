@@ -1,0 +1,16 @@
+{
+  "id": "lt.personal.lrttelevizija",
+  "version": "1.0.0",
+  "vendor": "Personal",
+  "type": "web",
+  "main": "index.html",
+  "title": "LRT Televizija",
+  "appDescription": "LRT Televizijos tiesioginė transliacija",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#141414",
+  "resolution": "1920x1080",
+  "bgColor": "#000000",
+  "splashColor": "#000000",
+  "disableBackHistoryAPI": true
+}
