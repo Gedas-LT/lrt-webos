@@ -52,7 +52,7 @@ Installing the same app id again replaces the previous package. The webOS emulat
 
 ## Remote
 
-- **Back** leaves the app. On webOS TV 6.0 and later the TV asks you to confirm. On older TVs it returns to Home.
+- **Back** closes the app. On webOS TV 6.0 and later the TV may ask you to confirm.
 - **Play** and **Pause** start and pause the picture. **Play/Pause** toggles it.
 - If the stream cannot be started, the screen says **Nepavyko paleisti**. Press **OK** to try again.
 

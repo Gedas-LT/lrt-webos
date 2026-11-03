@@ -325,14 +325,12 @@
   }
 
   function exitApp() {
-    if (window.webOS && typeof webOS.platformBack === "function") {
-      webOS.platformBack();
-      return;
-    }
-    if (window.PalmSystem && typeof window.PalmSystem.platformBack === "function") {
-      window.PalmSystem.platformBack();
-      return;
-    }
+    userPaused = true;
+    try {
+      video.pause();
+    } catch (e) {}
+    // platformBack() opens the Home app row on webOS TV 5 and earlier.
+    // window.close() closes the app.
     window.close();
   }
 
@@ -350,6 +348,24 @@
   }
 
   function remoteAction(event) {
+    // webOS often reports event.key as "Unidentified" and puts the real button in keyCode.
+    var code = event.keyCode || event.which || 0;
+    if (code === 461 || code === 8) {
+      return "back";
+    }
+    if (code === 13) {
+      return "enter";
+    }
+    if (code === 415) {
+      return "play";
+    }
+    if (code === 19) {
+      return "pause";
+    }
+    if (code === 463 || code === 179 || code === 10252) {
+      return "toggle";
+    }
+
     var name = event.key && event.key !== "Unidentified" ? event.key : "";
     var codeName = event.code && event.code !== "Unidentified" ? event.code : "";
     var token = (name || codeName).toLowerCase();
@@ -379,52 +395,60 @@
     return "";
   }
 
-  window.addEventListener("keydown", function (event) {
-    var action = remoteAction(event);
+  document.body.tabIndex = -1;
+  video.tabIndex = -1;
+  document.body.focus();
 
-    if (action === "back") {
-      event.preventDefault();
-      exitApp();
-      return;
-    }
-
-    if (action === "enter") {
-      event.preventDefault();
-      if (waitingForStart) {
-        beginPlayback();
+  document.addEventListener(
+    "keydown",
+    function (event) {
+      var action = remoteAction(event);
+      if (!action) {
         return;
       }
-      if (failed) {
-        autoRetries = 0;
-        start();
-      }
-      return;
-    }
-
-    if (action === "play") {
       event.preventDefault();
-      if (!failed) {
-        beginPlayback();
-      }
-      return;
-    }
+      document.body.focus();
 
-    if (action === "pause") {
-      event.preventDefault();
-      if (failed) {
+      if (action === "back") {
+        exitApp();
         return;
       }
-      userPaused = true;
-      video.pause();
-      showOverlay("Pauzė", false);
-      return;
-    }
 
-    if (action === "toggle") {
-      event.preventDefault();
-      togglePlayback();
-    }
-  });
+      if (action === "enter") {
+        if (waitingForStart) {
+          beginPlayback();
+          return;
+        }
+        if (failed) {
+          autoRetries = 0;
+          start();
+        }
+        return;
+      }
+
+      if (action === "play") {
+        if (!failed) {
+          beginPlayback();
+        }
+        return;
+      }
+
+      if (action === "pause") {
+        if (failed) {
+          return;
+        }
+        userPaused = true;
+        video.pause();
+        showOverlay("Pauzė", false);
+        return;
+      }
+
+      if (action === "toggle") {
+        togglePlayback();
+      }
+    },
+    true
+  );
 
   start();
 })();
